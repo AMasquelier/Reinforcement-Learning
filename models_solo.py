@@ -36,41 +36,40 @@ class MCPrediction:
         self.game = game
         self.name = "Monte-Carlo prediction"
         
-    def choice(self, s, player, curious=False, verbose=False):
-        actions = self.game.possible_actions(s, player)
+    def choice(self, s, curious=False, verbose=False):
+        actions = self.game.possible_actions(s)
         if len(actions) == 0: return None
         
         random.shuffle(actions)
         scores = []
         for a in actions:
-            sp = self.game.step(s, a, player)
+            sp = self.game.step(s, a)
             score = 0
             if sp in self.V: score = self.V[sp]
-            elif curious: score = player * 999
+            elif curious: score = 999
             scores.append((score, a))
             if verbose: print('   ', score, a)
             
-        if player == 1: return max(scores, key=lambda x: x[0])[1]
-        if player == -1: return min(scores, key=lambda x: x[0])[1]
+        return max(scores)[1]
         
-    def make_game(self, initial_state, player=1, smart={-1:False, 1:False}):
+    def make_game(self, initial_state, smart=False):
         s = initial_state
         states = [s]
         results = [self.game.reward(s)]
         while not self.game.is_terminal(s):
-            if not smart[player]: a = self.game.random_action(s, player)
-            else: a = self.choice(s, player, True)
-            s = self.game.step(s, a, player)
+            if not smart: a = self.game.random_action(s)
+            else: a = self.choice(s, True)
+                
+            s = self.game.step(s, a)
             states.append(s)
             results.append(self.game.reward(s))
-            player *= -1
         return states, results
     
-    def train(self, n=1000, smart={-1:False, 1:False}):
+    def train(self, n=1000, smart=False):
         initial_state = self.game.initial_state()
         for i in range(n):
             G = 0
-            S, R = self.make_game(initial_state, self.game.first_player(), smart)
+            S, R = self.make_game(initial_state, smart)
             S, R = reversed(S), reversed(R)
             for s, r in zip(S, R):
                 G = self.gamma * G + r
@@ -93,7 +92,7 @@ class StoreQ:
         
     def Get(self, key):
         if key in self.x: return self.x[key]
-        return 0
+        return 99999
     
     def Contains(self, key):
         return key in self.x
@@ -107,10 +106,9 @@ class QLearning:
         self.game = game
         self.name = "Q-Learning"
         
-        
-    def best_Q(self, s, player):
+    def best_Q(self, s):
         scores = []
-        A = self.game.possible_actions(s, player)
+        A = self.game.possible_actions(s)
         random.shuffle(A)
         A.append(None)
         for a in A: 
@@ -118,8 +116,8 @@ class QLearning:
         
         return max(scores)
         
-    def choice(self, s, player, curious=False, verbose=False):
-        actions = self.game.possible_actions(s, player)
+    def choice(self, s, curious=False, verbose=False):
+        actions = self.game.possible_actions(s)
         if len(actions) == 0: return None
         
         random.shuffle(actions)
@@ -127,22 +125,20 @@ class QLearning:
         for a in actions:
             scores.append((self.Q.Get((a, s)), a))
             
-        if player == 1: return max(scores, key=lambda x: x[0])[1]
-        if player == -1: return min(scores, key=lambda x: x[0])[1]
+        return max(scores, key=lambda x: (x[0], -x[1]))[1]
         
-    def make_game(self, initial_state, player=1, epsilon=0.5):
+    def make_game(self, initial_state, epsilon=0.5):
         s = initial_state
         actions = []
         while not self.game.is_terminal(s):
             rand = random.uniform(0, 1)
-            if rand < epsilon: a = self.game.random_action(s, player)
-            else: a = self.choice(s, player, True)
-            sp = self.game.step(s, a, player)
+            if rand < epsilon: a = self.game.random_action(s)
+            else: a = self.choice(s, True)
+            sp = self.game.step(s, a)
             r = self.game.reward(s)
             
-            self.Q.Set((a, s), self.Q.Get((a, s)) + self.alpha * (r + self.gamma * self.best_Q(sp, player) - self.Q.Get((a, s))))
+            self.Q.Set((a, s), self.Q.Get((a, s)) + self.alpha * (r + self.gamma * self.best_Q(sp) - self.Q.Get((a, s))))
             s = sp
-            player *= -1
         
         r = self.game.reward(s)     
         self.Q.Set((None, s), self.Q.Get((None, s)) + self.alpha * r)
@@ -153,7 +149,8 @@ class QLearning:
         initial_state = self.game.initial_state()
         for i in range(n):
             s = initial_state
-            A = self.make_game(initial_state, self.game.first_player(), epsilon)
+            A = self.make_game(initial_state, epsilon)
+            
             
             
 ##############################
@@ -179,47 +176,44 @@ class StoreBP:
 
 class Bandit:
     def __init__(self, game, alpha=0.3, gamma=0.8):
-        self.Q = StoreBP()
+        self.Q = StoreBP(9999)
         self.N = StoreBP()
         self.alpha = alpha
         self.gamma = gamma
         self.game = game
         self.name = "Bandit problem"
         
-        
-    def choice(self, s, player, curious=False, verbose=False):
-        actions = self.game.possible_actions(s, player)
+    def choice(self, s, curious=False, verbose=False):
+        actions = self.game.possible_actions(s)
         if len(actions) == 0: return None
         
         random.shuffle(actions)
         scores = []
         for a in actions:
-            scores.append((self.Q.Get(s), a))
+            scores.append((self.Q.Get((a, s)), a))
             
-        if player == 1: return max(scores, key=lambda x: x[0])[1]
-        if player == -1: return min(scores, key=lambda x: x[0])[1]
+        return max(scores, key=lambda x: (x[0]))[1]
         
-    def make_game(self, initial_state, player=1, epsilon=0.5):
+    def make_game(self, initial_state, epsilon=0.5):
         s = initial_state
         actions = []
         while not self.game.is_terminal(s):
             rand = random.uniform(0, 1)
-            if rand < epsilon: a = self.game.random_action(s, player)
+            if rand < epsilon: a = self.game.random_action(s)
             else: a = self.choice(s, True)
                 
-            sp = self.game.step(s, a, player)
+            sp = self.game.step(s, a)
             r = self.game.reward(s)
             
-            self.N.Set(a, self.N.Get(a)+1)
-            Qa = self.Q.Get(a)
-            self.Q.Set(a, Qa + (r-Qa) / self.N.Get(a))
+            self.N.Set((a, s), self.N.Get((a, s))+1)
+            Qa = self.Q.Get((a, s))
+            self.Q.Set((a, s), Qa + (r-Qa) / self.N.Get((a, s)))
             s = sp
-            player *= -1
         
         r = self.game.reward(s)   
-        Qa = self.Q.Get(None)
-        self.N.Set(None, self.N.Get(None)+1)
-        self.Q.Set(None, Qa + (r-Qa) / self.N.Get(None))
+        Qa = self.Q.Get((None, s))
+        self.N.Set((None, s), self.N.Get((None, s))+1)
+        self.Q.Set((None, s), Qa + (r-Qa) / self.N.Get((None, s)))
         
         return actions
     
@@ -227,8 +221,8 @@ class Bandit:
         initial_state = self.game.initial_state()
         for i in range(n):
             s = initial_state
-            A = self.make_game(initial_state, self.game.first_player(), epsilon)
-            
+            A = self.make_game(initial_state, epsilon)
+            A = self.make_game(initial_state, epsilon)
             
 ##############################
 #        n-step SARSA        #
@@ -250,18 +244,19 @@ class StoreNSS:
     
     def Contains(self, key):
         return key in self.x
-            
+    
+
 class NStepSarsa:
-    def __init__(self, game, n=1, alpha=0.5, gamma=0.8):
-        self.Q = StoreNSS()
+    def __init__(self, game, n=5, alpha=0.5, gamma=0.8):
+        self.Q = StoreNSS(9999)
         self.alpha = alpha
         self.gamma = gamma
         self.game = game
         self.n = n
         self.name = "n-Step SARSA"
         
-    def choice(self, s, player, curious=False, verbose=False):
-        actions = self.game.possible_actions(s, player)
+    def choice(self, s, curious=False, verbose=False):
+        actions = self.game.possible_actions(s)
         if len(actions) == 0: return None
         
         random.shuffle(actions)
@@ -269,36 +264,35 @@ class NStepSarsa:
         for a in actions:
             scores.append((self.Q.Get((a, s)), a))
             
-        if player == 1: return max(scores, key=lambda x: x[0])[1]
-        if player == -1: return min(scores, key=lambda x: x[0])[1]
+        return max(scores, key=lambda x: (x[0]))[1]
     
-    def choose_action(self, s, player, epsilon):
+    def choose_action(self, s, epsilon):
         rand = random.uniform(0, 1)
-        if rand < epsilon: a = self.game.random_action(s, player)
+        if rand < epsilon: a = self.game.random_action(s)
         else: a = self.choice(s, True)
         return a
         
-    def make_game(self, initial_state, player=1, epsilon=0.5):
+    def make_game(self, initial_state, epsilon=0.5):
         t = 0
         T = 999999999
         
         s = initial_state
-        a = self.choose_action(s, player, epsilon)
+        a = self.choose_action(s, epsilon)
         actions = [a]
         states = [s]
         rewards = [0]
         
         while True:
             if t < T:
-                s = self.game.step(s, a, player)
+                s = self.game.step(s, a)
                 r = self.game.reward(s)
-                player *= -1
+                
                 states.append(s)
                 rewards.append(r)
                 
                 if self.game.is_terminal(s): T = t+1
                 else:
-                    a = self.choose_action(s, player, epsilon)
+                    a = self.choose_action(s, epsilon)
                     actions.append(a)
                     
             tau = t-self.n+1
@@ -323,4 +317,4 @@ class NStepSarsa:
         initial_state = self.game.initial_state()
         for i in range(n):
             s = initial_state
-            A = self.make_game(initial_state, self.game.first_player(), epsilon)
+            A = self.make_game(initial_state, epsilon)

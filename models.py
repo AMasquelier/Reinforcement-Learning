@@ -36,7 +36,7 @@ class MCPrediction:
         self.game = game
         self.name = "Monte-Carlo prediction"
         
-    def choice(self, s, player, curious=False, verbose=False):
+    def argmax(self, s, player):
         actions = self.game.possible_actions(s, player)
         if len(actions) == 0: return None
         
@@ -44,38 +44,96 @@ class MCPrediction:
         scores = []
         for a in actions:
             sp = self.game.step(s, a, player)
-            score = 0
+            score = 999
             if sp in self.V: score = self.V[sp]
-            elif curious: score = player * 999
             scores.append((score, a))
-            if verbose: print('   ', score, a)
             
         if player == 1: return max(scores, key=lambda x: x[0])[1]
         if player == -1: return min(scores, key=lambda x: x[0])[1]
         
-    def make_game(self, initial_state, player=1, smart={-1:False, 1:False}):
+    def make_game(self, initial_state, player=1, epsilon={-1:0.5, 1:0.5}):
         s = initial_state
         states = [s]
         results = [self.game.reward(s)]
         while not self.game.is_terminal(s):
-            if not smart[player]: a = self.game.random_action(s, player)
-            else: a = self.choice(s, player, True)
+            rand = random.uniform(0, 1)
+            if rand < epsilon[player]: a = self.game.random_action(s, player)
+            else: a = self.argmax(s, player)
+                
             s = self.game.step(s, a, player)
             states.append(s)
             results.append(self.game.reward(s))
             player *= -1
         return states, results
     
-    def train(self, n=1000, smart={-1:False, 1:False}):
+    def train(self, n=1000, epsilon={-1:0.5, 1:0.5}):
         initial_state = self.game.initial_state()
         for i in range(n):
             G = 0
-            S, R = self.make_game(initial_state, self.game.first_player(), smart)
+            S, R = self.make_game(initial_state, self.game.first_player(), epsilon)
             S, R = reversed(S), reversed(R)
             for s, r in zip(S, R):
                 G = self.gamma * G + r
                 self.Returns.Add(s, G)
                 self.V[s] = self.Returns.Average(s)
+                
+                
+################################
+# Monte-Carlo Exploring Starts #
+################################
+# Source : Reinforcement Learning : an introcuction, Sutton & Barto, p.99
+
+class MCES:
+    def __init__(self, game, gamma=0.8):
+        self.P = {}
+        self.Returns = StoreMCP()
+        self.Q = StoreQ()
+        self.gamma = gamma
+        self.game = game
+        self.name = "Monte-Carlo Exploring Starts"
+        
+    def argmax(self, s, player):
+        actions = self.game.possible_actions(s, player)
+        if len(actions) == 0: return None
+        
+        random.shuffle(actions)
+        scores = []
+        for a in actions:
+            scores.append((self.Q.Get((a, s)), a))
+            
+        if player == 1: return max(scores, key=lambda x: x[0])[1]
+        if player == -1: return min(scores, key=lambda x: x[0])[1]
+        
+    def make_game(self, initial_state, player=1, epsilon={-1:0.5, 1:0.5}):
+        s = initial_state
+        states = [s]
+        rewards = [0]
+        actions = []
+        while not self.game.is_terminal(s):
+            rand = random.uniform(0, 1)
+            if rand < epsilon[player]: a = self.game.random_action(s, player)
+            else: a = self.argmax(s, player)
+        
+            actions.append(a)
+            s = self.game.step(s, a, player)
+            states.append(s)
+            rewards.append(self.game.reward(s))
+            player *= -1
+        actions.append(None)
+        
+        return states, rewards, actions
+    
+    def train(self, n=1000, epsilon={-1:0.5, 1:0.5}):
+        initial_state = self.game.initial_state()
+        for i in range(n):
+            G = 0
+            S, R, A = self.make_game(initial_state, self.game.first_player(), epsilon)
+            S, R, A = reversed(S), reversed(R), reversed(A)
+            for s, r, a in zip(S, R, A):
+                G = self.gamma * G + r
+                self.Returns.Add((a,s), G)
+                self.Q.Set((a, s), self.Returns.Average((a,s)))
+                self.P[s] = self.argmax(s, 0)
                 
                 
                 
@@ -118,7 +176,7 @@ class QLearning:
         
         return max(scores)
         
-    def choice(self, s, player, curious=False, verbose=False):
+    def argmax(self, s, player):
         actions = self.game.possible_actions(s, player)
         if len(actions) == 0: return None
         
@@ -130,13 +188,13 @@ class QLearning:
         if player == 1: return max(scores, key=lambda x: x[0])[1]
         if player == -1: return min(scores, key=lambda x: x[0])[1]
         
-    def make_game(self, initial_state, player=1, epsilon=0.5):
+    def make_game(self, initial_state, player=1, epsilon={-1:0.5, 1:0.5}):
         s = initial_state
         actions = []
         while not self.game.is_terminal(s):
             rand = random.uniform(0, 1)
-            if rand < epsilon: a = self.game.random_action(s, player)
-            else: a = self.choice(s, player, True)
+            if rand < epsilon[player]: a = self.game.random_action(s, player)
+            else: a = self.argmax(s, player)
             sp = self.game.step(s, a, player)
             r = self.game.reward(s)
             
@@ -149,7 +207,7 @@ class QLearning:
         
         return actions
     
-    def train(self, n=1000, epsilon=0.5):
+    def train(self, n=1000, epsilon={-1:0.5, 1:0.5}):
         initial_state = self.game.initial_state()
         for i in range(n):
             s = initial_state

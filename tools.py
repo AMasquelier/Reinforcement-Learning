@@ -9,13 +9,11 @@ def make_games(game, model, n=1000, verbose=False, smart={-1:True, 1:True}):
         s = initial_state
         player = game.first_player()
         
-        if verbose: print(s)
         while not game.is_terminal(s):
-            if not smart[player]: a = game.random_action(s)
+            if not smart[player]: a = game.random_action(s, player)
             else: a = model.choice(s, player, True)
             s = game.step(s, a, player)
             player *= -1
-            if verbose: print(s)
 
         if game.winner(s) == 1: w += 1
         if game.winner(s) == -1: l += 1

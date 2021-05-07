@@ -77,14 +77,70 @@ class MCPrediction:
                 self.V[s] = self.Returns.Average(s)
                 
                 
+################################
+# Monte-Carlo Exploring Starts #
+################################
+# Source : Reinforcement Learning : an introcuction, Sutton & Barto, p.99
+
+class MCES:
+    def __init__(self, game, gamma=0.8):
+        self.P = {}
+        self.Returns = StoreMCP()
+        self.Q = StoreQ()
+        self.gamma = gamma
+        self.game = game
+        self.name = "Monte-Carlo Exploring Starts"
+        
+    def argmax(self, s):
+        actions = self.game.possible_actions(s)
+        if len(actions) == 0: return None
+        
+        random.shuffle(actions)
+        scores = []
+        for a in actions:
+            scores.append((self.Q.Get((a, s)), a))
+            
+        return max(scores, key=lambda x: x[0])[1]
+        
+    def make_game(self, initial_state, epsilon=0.5):
+        s = initial_state
+        states = [s]
+        rewards = [0]
+        actions = []
+        while not self.game.is_terminal(s):
+            rand = random.uniform(0, 1)
+            if rand < epsilon: a = self.game.random_action(s)
+            else: a = self.argmax(s)
+        
+            actions.append(a)
+            s = self.game.step(s, a)
+            states.append(s)
+            rewards.append(self.game.reward(s))
+        actions.append(None)
+        
+        return states, rewards, actions
+    
+    def train(self, n=1000, epsilon=0.5):
+        initial_state = self.game.initial_state()
+        for i in range(n):
+            G = 0
+            S, R, A = self.make_game(initial_state, epsilon)
+            S, R, A = reversed(S), reversed(R), reversed(A)
+            for s, r, a in zip(S, R, A):
+                G = self.gamma * G + r
+                self.Returns.Add((a,s), G)
+                self.Q.Set((a, s), self.Returns.Average((a,s)))
+                self.P[s] = self.argmax(s)
+                
                 
 ##########################
 #       Q-Learning       #
 ##########################
 # Source : Reinforcement Learning : an introcuction, Sutton & Barto, p.131
 class StoreQ:
-    def __init__(self):
+    def __init__(self, default=0):
         self.x = {}
+        self.default = default
         
     def Set(self, key, val):
         if key not in self.x: self.x[key] = val
@@ -92,7 +148,7 @@ class StoreQ:
         
     def Get(self, key):
         if key in self.x: return self.x[key]
-        return 99999
+        return 0
     
     def Contains(self, key):
         return key in self.x
@@ -116,7 +172,7 @@ class QLearning:
         
         return max(scores)
         
-    def choice(self, s, curious=False, verbose=False):
+    def argmax(self, s):
         actions = self.game.possible_actions(s)
         if len(actions) == 0: return None
         
@@ -133,7 +189,7 @@ class QLearning:
         while not self.game.is_terminal(s):
             rand = random.uniform(0, 1)
             if rand < epsilon: a = self.game.random_action(s)
-            else: a = self.choice(s, True)
+            else: a = self.argmax(s)
             sp = self.game.step(s, a)
             r = self.game.reward(s)
             
@@ -183,7 +239,7 @@ class Bandit:
         self.game = game
         self.name = "Bandit problem"
         
-    def choice(self, s, curious=False, verbose=False):
+    def argmax(self, s):
         actions = self.game.possible_actions(s)
         if len(actions) == 0: return None
         
@@ -200,7 +256,7 @@ class Bandit:
         while not self.game.is_terminal(s):
             rand = random.uniform(0, 1)
             if rand < epsilon: a = self.game.random_action(s)
-            else: a = self.choice(s, True)
+            else: a = self.argmax(s)
                 
             sp = self.game.step(s, a)
             r = self.game.reward(s)
@@ -221,7 +277,6 @@ class Bandit:
         initial_state = self.game.initial_state()
         for i in range(n):
             s = initial_state
-            A = self.make_game(initial_state, epsilon)
             A = self.make_game(initial_state, epsilon)
             
 ##############################

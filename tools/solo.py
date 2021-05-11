@@ -14,10 +14,10 @@ def make_games(game, model, n=10000, verbose=False, epsilon=0.5):
             rand = random.uniform(0, 1)
             if rand < epsilon: a = game.random_action(s)
             else: a = model.argmax(s)
-            if verbose: print(a, s.square, s.t)
+            if verbose: print(a, s.repr())
             s = game.step(s, a)
-        if verbose: print(a, s.square, s.t)
-        cost.append(s.t)
+        if verbose: print(a, s.repr())
+        cost.append(s.measure)
     if verbose: print("Mean cost :", np.mean(cost))
     return np.mean(cost)
     

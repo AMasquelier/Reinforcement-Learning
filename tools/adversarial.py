@@ -67,3 +67,6 @@ def compare_learning_curve(game, model1, model2, n=10000, steps=100, n_games=100
     plt.xlabel('Number of training games')
     plt.ylabel('Frequence')
     plt.show()
+    
+    print(model1.name + ' win :', np.round(100*W[-1],  2),'%   lost :', np.round(100*L[-1],  2),'%')
+    print(model2.name + ' win :', np.round(100*W2[-1], 2),'%   lost :', np.round(100*L2[-1], 2),'%')

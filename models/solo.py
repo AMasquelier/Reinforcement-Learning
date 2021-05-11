@@ -57,10 +57,10 @@ class MCPrediction:
 # Source : Reinforcement Learning : an introcuction, Sutton & Barto, p.99
 
 class MCES:
-    def __init__(self, game, gamma=0.8):
+    def __init__(self, game, gamma=0.8, defaultq=0):
         self.P = {}
         self.Returns = StoreAverage()
-        self.Q = StoreValue()
+        self.Q = StoreValue(defaultq)
         self.gamma = gamma
         self.game = game
         self.name = "Monte-Carlo Exploring Starts"
@@ -111,26 +111,10 @@ class MCES:
 #       Q-Learning       #
 ##########################
 # Source : Reinforcement Learning : an introcuction, Sutton & Barto, p.131
-class StoreQ:
-    def __init__(self, default=0):
-        self.x = {}
-        self.default = default
-        
-    def Set(self, key, val):
-        if key not in self.x: self.x[key] = val
-        else: self.x[key] = val
-        
-    def Get(self, key):
-        if key in self.x: return self.x[key]
-        return 0
-    
-    def Contains(self, key):
-        return key in self.x
-    
 
 class QLearning:
-    def __init__(self, game, alpha=0.3, gamma=0.8):
-        self.Q = StoreValue()
+    def __init__(self, game, alpha=0.3, gamma=0.8, defaultq=0):
+        self.Q = StoreValue(defaultq)
         self.alpha = alpha
         self.gamma = gamma
         self.game = game

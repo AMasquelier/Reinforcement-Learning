@@ -7,14 +7,14 @@ from models.storage import *
 ################################
 # Source : Reinforcement Learning : an introcuction, Sutton & Barto, p.99
 
-class MCES:
+class DeepMCES:
     def __init__(self, game, gamma=0.8, defaultq=0):
         self.P = {}
         self.Returns = StoreAverage()
         self.Q = StoreValue(defaultq)
         self.gamma = gamma
         self.game = game
-        self.name = "Monte-Carlo Exploring Starts"
+        self.name = "Deep Monte-Carlo Exploring Starts"
         
     def argmax(self, s):
         actions = self.game.possible_actions(s)
@@ -63,7 +63,7 @@ class MCES:
 ##########################
 # Source : Reinforcement Learning : an introcuction, Sutton & Barto, p.131
 
-class QLearning:
+class DeepQLearning:
     def __init__(self, game, alpha=0.3, gamma=0.8, defaultq=0):
         self.Q = StoreApproximation(game, default=defaultq)
         self.alpha = alpha

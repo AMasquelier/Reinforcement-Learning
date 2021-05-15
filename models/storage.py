@@ -45,9 +45,9 @@ class StoreValue:
 
 # Approximate the values with a given model
 class StoreApproximation:
-    def __init__(self, game, model=None, default=0, retrain_iter=1000):
-        self.x = deque(maxlen=50000)
-        self.y = deque(maxlen=50000)
+    def __init__(self, game, model=None, default=0, retrain_iter=1000, max_data=50000):
+        self.x = deque(maxlen=max_data)
+        self.y = deque(maxlen=max_data)
         self.trained = False
         if model != None: self.model = model
         else:             self.model = MLPRegressor()

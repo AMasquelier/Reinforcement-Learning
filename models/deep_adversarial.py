@@ -11,10 +11,10 @@ from models.storage import *
 # Source : Reinforcement Learning : an introcuction, Sutton & Barto, p.99
 
 class DeepMCES:
-    def __init__(self, game, gamma=0.8, model=None, defaultq=0, retrain_iter=1000):
+    def __init__(self, game, gamma=0.8, model=None, defaultq=0, retrain_iter=1000, max_data=50000):
         self.P = {}
         self.Returns = StoreAverage()
-        self.Q = StoreApproximation(game, model=model, default=defaultq, retrain_iter=retrain_iter)
+        self.Q = StoreApproximation(game, model=model, default=defaultq, retrain_iter=retrain_iter, max_data=max_data)
         self.gamma = gamma
         self.game = game
         self.name = "Deep Monte-Carlo Exploring Starts"
@@ -70,8 +70,8 @@ class DeepMCES:
 # Source : Reinforcement Learning : an introcuction, Sutton & Barto, p.131
 
 class DeepQLearning:
-    def __init__(self, game, alpha=0.3, gamma=0.8, model=None, defaultq=0, retrain_iter=1000):
-        self.Q = StoreApproximation(game, model=model, default=defaultq, retrain_iter=retrain_iter)
+    def __init__(self, game, alpha=0.3, gamma=0.8, model=None, defaultq=0, retrain_iter=1000, max_data=50000):
+        self.Q = StoreApproximation(game, model=model, default=defaultq, retrain_iter=retrain_iter, max_data=max_data)
         self.alpha = alpha
         self.gamma = gamma
         self.game = game

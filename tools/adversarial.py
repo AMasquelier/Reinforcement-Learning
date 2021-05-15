@@ -21,12 +21,12 @@ def make_games(game, model, n=1000, verbose=False, smart={-1:True, 1:True}):
     return w / n, l / n
     
     
-def learning_curve(game, model, n=10000, steps=100, n_games=1000):
+def learning_curve(game, model, n=10000, steps=100, n_games=1000, epsilon=0.5):
     x = np.linspace(0, n, steps+1)
     W, L = [], []
     W2, L2 = [], []
     for i, j in zip(x[1:], x[:-1]):
-        model.train(int(i-j))
+        model.train(int(i-j), epsilon={-1:epsilon, 1:epsilon})
         w, l = make_games(game, model, n_games, False, smart={-1:False, 1:True})
         W.append(w)
         L.append(l)
@@ -43,13 +43,13 @@ def learning_curve(game, model, n=10000, steps=100, n_games=1000):
     plt.show()
     
     
-def compare_learning_curve(game, model1, model2, n=10000, steps=100, n_games=1000):
+def compare_learning_curve(game, model1, model2, n=10000, steps=100, n_games=1000, epsilon=0.5):
     x = np.linspace(0, n, steps+1)
     W, L = [], []
     W2, L2 = [], []
     for i, j in zip(x[1:], x[:-1]):
-        model1.train(int(i-j))
-        model2.train(int(i-j))
+        model1.train(int(i-j), epsilon={-1:epsilon, 1:epsilon})
+        model2.train(int(i-j), epsilon={-1:epsilon, 1:epsilon})
         w, l = make_games(game, model1, n_games, False, smart={-1:False, 1:True})
         W.append(w)
         L.append(l)

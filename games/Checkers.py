@@ -16,10 +16,13 @@ def sign(x):
     return int(abs(x)/x)
 
 class State:
-    def __init__(self, board, passive_moves, next_player):
+    def __init__(self, board, passive_moves, next_player, score, ds):
         self.board = board
         self.passive_moves = passive_moves
         self.next_player = next_player
+        self.score = score
+        self.ds = ds
+        self.measure = score[1]-score[-1]
         
     def repr(self):
         return [self.board]
@@ -41,7 +44,7 @@ class Checkers:
         return 64 * (8 * p1[0] + p1[1]) + 8 * p2[0] + p2[1]
     
     def initial_state(self):
-        return State(((1,0,1,0,1,0,1,0), (0,1,0,1,0,1,0,1), (1,0,1,0,1,0,1,0), (0,0,0,0,0,0,0,0), (0,0,0,0,0,0,0,0), (0,-1,0,-1,0,-1,0,-1), (-1,0,-1,0,-1,0,-1,0), (0,-1,0,-1,0,-1,0,-1)), 0, 1)
+        return State(((1,0,1,0,1,0,1,0), (0,1,0,1,0,1,0,1), (1,0,1,0,1,0,1,0), (0,0,0,0,0,0,0,0), (0,0,0,0,0,0,0,0), (0,-1,0,-1,0,-1,0,-1), (-1,0,-1,0,-1,0,-1,0), (0,-1,0,-1,0,-1,0,-1)), 0, 1, {-1:0, 0:0, 1:0}, 0)
     
     def first_player(self):
         return 1
@@ -73,28 +76,25 @@ class Checkers:
             for j in range(8):
                 if sign(s.board[i][j]) == player: self.recursive_moves(s, player, (i,j), ret)
         return ret
+    
+    def compute_score(self, s):
+        score = {-1:12, 0:0, 1:12}
+        for i in range(8):
+            for j in range(8):
+                score[-sign(s.board[i][j])]-=1
+        return score
         
     def is_terminal(self, s):
         if s.passive_moves > 20: return True
-        score = {-1:12, 0:0, 1:12}
-        for i in range(8):
-            for j in range(8):
-                score[-sign(s.board[i][j])]-=1
+        score = self.compute_score(s)
         return score[-1] == 12 or score[1] == 12
     
     def reward(self, s):
-        score = {-1:12, 0:0, 1:12}
-        for i in range(8):
-            for j in range(8):
-                score[-sign(s.board[i][j])]-=1
-    
-        return self.winner(s)
+        score = self.compute_score(s)
+        return s.ds
     
     def winner(self, s):
-        score = {-1:12, 0:0, 1:12}
-        for i in range(8):
-            for j in range(8):
-                score[-sign(s.board[i][j])]-=1
+        score = score = self.compute_score(s)
                 
         if score[1] < score[-1]: return -1
         if score[1] > score[-1]: return 1
@@ -105,6 +105,7 @@ class Checkers:
     def step(self, s, a, player):
         if a == None: return s
         buf = tuple_to_matrix(s.board)
+        ls = self.compute_score(s)
         pm = s.passive_moves
         p1,p2 = a
         dx, dy = p2[1]-p1[1], p2[0]-p1[0]
@@ -113,7 +114,9 @@ class Checkers:
         if abs(dx) == 2: buf[p1[0]+int(dy/2)][p1[1]+int(dx/2)] = 0
         else: pm += 1
         buf[p1[0]][p1[1]] = 0
-        return State(matrix_to_tuple(buf), pm, -player)
+        
+        score = self.compute_score(s)
+        return State(matrix_to_tuple(buf), pm, -player, score, (score[1]-score[-1]) - (ls[1]-ls[-1]))
     
     
     def random_action(self, s, player):

@@ -3,6 +3,7 @@ class State:
     def __init__(self, square, t):
         self.square = square
         self.t = t
+        self.measure = t
         
     def repr(self):
         return self.square

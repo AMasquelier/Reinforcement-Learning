@@ -111,7 +111,7 @@ class TicTacToe:
         for i in range(self.size):
             for j in range(self.size):
                 if s.board[i][j] == 0: count += 1
-        if count == 0: return True
+        if count == 0: return 0
         for i in [-1, 1]:
             if self.found_win(s, i): return i
         return 0
